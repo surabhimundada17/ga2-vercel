@@ -24,9 +24,12 @@ with open(DATA_PATH, "r") as f:
 @app.post("/")
 async def get_latency_metrics(request: Request):
     payload = await request.json()
-    regions = payload.get("regions", [])
+    regions = payload.get("regions")
+    
+    if not regions or not isinstance(regions, (list, dict)):
+        return {"error": "Request must include a 'regions' array or object"}
+    
     threshold = payload.get("threshold_ms", 180)
-
     response = {}
 
     for region in regions:
