@@ -31,12 +31,18 @@ async def get_latency_metrics(request: Request):
             return {"error": "Request must include a 'regions' array"}
         
         threshold = payload.get("threshold_ms", 180)
-        response = {}
+        
+        # Initialize response with regions
+        response = {"regions": {}}
 
         for region in regions:
             # Filter records for this region
             region_data = [r for r in telemetry if r["region"] == region]
+            
             if not region_data:
+                response["regions"][region] = {
+                    "error": f"No data found for region {region}"
+                }
                 continue
 
             latencies = [r["latency_ms"] for r in region_data]
@@ -47,16 +53,13 @@ async def get_latency_metrics(request: Request):
             avg_uptime = float(np.mean(uptimes))
             breaches = int(sum(l > threshold for l in latencies))
 
-            response[region] = {
+            response["regions"][region] = {
                 "avg_latency": round(avg_latency, 2),
                 "p95_latency": round(p95_latency, 2),
                 "avg_uptime": round(avg_uptime, 3),
-                "breaches": breaches,
+                "breaches": breaches
             }
-
-        if not response:
-            return {"error": "No data found for the specified regions"}
-            
+        
         return response
     except json.JSONDecodeError:
         return {"error": "Invalid JSON in request body"}
